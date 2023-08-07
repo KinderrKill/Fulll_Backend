@@ -1,31 +1,35 @@
 import { FleetData } from '../../../domain/FleetData';
-import { randomUUID } from 'crypto';
 import { VehicleData } from '../../../domain/VehicleData';
 import { Given, Then } from '@cucumber/cucumber';
-import { demoFleetManager, demoVehicleManager } from '../../sharedValue';
+import { fleetCommandHandler, vehicleCommandHandler } from '../../sharedValue';
 import { MSG_TEST } from '../../../utils/Lang';
 import { getErrorMessage } from '../../../utils/Constants';
 
 const demoVehicle = new VehicleData('AA-001-AA');
-const demoFleet = new FleetData(randomUUID(), 1.073197, 49.381959);
+let demoFleet: FleetData;
 
 Given(/^another fleet$/, () => {
-  demoFleetManager.registerFleet(demoFleet);
+  const tempFleet = fleetCommandHandler.register(49.073197, 1.381959, 14.25554);
+  if (tempFleet !== undefined) {
+    demoFleet = tempFleet;
+  } else {
+    throw Error(getErrorMessage(MSG_TEST.ERROR_DURING_FLEET_CREATION));
+  }
 });
 
 Then(/^another vehicle$/, () => {
-  demoVehicleManager.registerVehicle(demoVehicle);
+  vehicleCommandHandler.register(demoVehicle.getPlate());
 });
 
 Then(/^I have registered this vehicle into my fleet$/, () => {
-  demoFleetManager.addVehicleToFleet(demoFleet.getId(), demoVehicle);
+  fleetCommandHandler.addVehicleToFleet(demoFleet.getId(), demoVehicle.getPlate());
 });
 
 Then(
   /^I try to register this vehicle again and should be informed this this vehicle has already been registered$/,
   () => {
     try {
-      demoFleetManager.addVehicleToFleet(demoFleet.getId(), demoVehicle);
+      fleetCommandHandler.addVehicleToFleet(demoFleet.getId(), demoVehicle.getPlate());
     } catch {
       return true;
     }

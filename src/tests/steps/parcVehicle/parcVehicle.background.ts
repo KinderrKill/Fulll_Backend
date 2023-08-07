@@ -1,31 +1,35 @@
-import { randomUUID } from 'crypto';
 import { FleetData } from '../../../domain/FleetData';
 import { VehicleData } from '../../../domain/VehicleData';
-import { Given, When, Then } from '@cucumber/cucumber';
+import { Given, Then } from '@cucumber/cucumber';
 
-import { demoFleetManager, demoVehicleManager } from '../../sharedValue';
+import { fleetCommandHandler, vehicleCommandHandler } from '../../sharedValue';
 
 export const demoVehicle = new VehicleData('AA-100-AA');
-export const demoFleet = new FleetData(randomUUID(), 10.073197, 490.381959);
-export const demoAnotherFleet = new FleetData(randomUUID(), 490.381959, 10.07, 10);
+
+export let demoFleet: FleetData;
 
 Given(/^a new fresh fleet$/, () => {
   // Conditional because this be called before each step
-  if (demoFleetManager.getById(demoFleet.getId()) === undefined) {
-    demoFleetManager.registerFleet(demoFleet);
+  if (!demoFleet) {
+    const tempFleet = fleetCommandHandler.register(10.43, 20.2103, 10);
+    if (tempFleet !== undefined) {
+      demoFleet = tempFleet;
+    }
   }
 });
 
 Given(/^a new fresh vehicle$/, () => {
   // Conditional because this be called before each step
-  if (demoVehicleManager.getByPlate(demoVehicle.getPlate()) === undefined) {
-    demoVehicleManager.registerVehicle(demoVehicle);
+  if (vehicleCommandHandler.getByPlate(demoVehicle.getPlate()) === undefined) {
+    vehicleCommandHandler.register(demoVehicle.getPlate());
   }
 });
 
 Then(/^I have registered this vehicle into my new fleet$/, () => {
   // Conditional because this be called before each step
-  if (demoFleet.getVehicleByPlate(demoVehicle.getPlate()) === undefined) {
-    demoFleetManager.addVehicleToFleet(demoFleet.getId(), demoVehicle);
+  const fleet = fleetCommandHandler.getById(demoFleet.getId());
+
+  if (fleet && fleet.getVehicleByPlate(demoVehicle.getPlate()) === undefined) {
+    fleetCommandHandler.addVehicleToFleet(fleet?.getId(), demoVehicle.getPlate());
   }
 });
