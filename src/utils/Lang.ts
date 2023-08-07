@@ -14,6 +14,7 @@ export const MSG_F = {
 };
 
 export const MSG_TEST = {
+  ERROR_DURING_FLEET_CREATION: 'Impossible de créer le parc (undefined)',
   VEHICLE_REGISTERED_TWICE: 'Le véhicule &s a été assigné au parc &s à plusieurs reprises !',
   FLEETS_ARE_NOT_ALL_PRESENTS: "Le véhicule &s n'est pas correctement assigné aux parcs prédéfinis &s et &s !",
   NOT_THE_SAME_LOCATION: "Le véhicule &s n'est pas à la localisation qu'il devrait &s",

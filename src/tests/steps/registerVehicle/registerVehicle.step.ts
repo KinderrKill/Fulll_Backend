@@ -1,25 +1,31 @@
-import { randomUUID } from 'crypto';
+import { MSG_TEST } from './../../../utils/Lang';
 import { FleetData } from '../../../domain/FleetData';
 import { VehicleData } from '../../../domain/VehicleData';
 import { Given, When, Then } from '@cucumber/cucumber';
 
-import { demoFleetManager, demoVehicleManager } from '../../sharedValue';
+import { fleetCommandHandler, vehicleCommandHandler } from '../../sharedValue';
+import { getErrorMessage } from '../../../utils/Constants';
 
 const demoVehicle = new VehicleData('AA-000-AA');
-const demoFleet = new FleetData(randomUUID(), 1.073197, 49.381959);
+let demoFleet: FleetData;
 
 Given(/^a fleet$/, () => {
-  demoFleetManager.registerFleet(demoFleet);
+  const tempFleet = fleetCommandHandler.register(1.073197, 49.381959);
+  if (tempFleet !== undefined) {
+    demoFleet = tempFleet;
+  } else {
+    throw Error(getErrorMessage(MSG_TEST.ERROR_DURING_FLEET_CREATION));
+  }
 });
 
 Then(/^a vehicle$/, () => {
-  demoVehicleManager.registerVehicle(demoVehicle);
+  vehicleCommandHandler.register(demoVehicle.getPlate());
 });
 
 When(/^I register this vehicle into my fleet$/, () => {
-  demoFleetManager.addVehicleToFleet(demoFleet.getId(), demoVehicle);
+  fleetCommandHandler.addVehicleToFleet(demoFleet.getId(), demoVehicle.getPlate());
 });
 
 Then(/^this vehicle should be part of my vehicle fleet$/, () => {
-  demoFleet.getVehicleByPlate(demoVehicle.getPlate());
+  fleetCommandHandler.getById(demoFleet.getId())?.getVehicleByPlate(demoVehicle.getPlate());
 });
