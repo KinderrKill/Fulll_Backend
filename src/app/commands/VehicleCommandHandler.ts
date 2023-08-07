@@ -14,10 +14,12 @@ export class VehicleCommandHandler {
     this.vehicleManager = vehicleManager;
   }
 
-  register(plate: string, fleetId?: string) {
+  register(plate: string, fleetId?: string): VehicleData | undefined {
     try {
       const newVehicle = new VehicleData(plate, fleetId);
       this.vehicleManager.registerVehicle(newVehicle);
+
+      return newVehicle;
     } catch (error) {
       throw new Error(error?.toString());
     }
@@ -25,6 +27,10 @@ export class VehicleCommandHandler {
 
   getByPlate(plate: string): VehicleData | undefined {
     return this.vehicleManager.getByPlate(plate);
+  }
+
+  getVehicles(): VehicleData[] {
+    return this.vehicleManager.getVehicles();
   }
 
   assignLocationToVehicle(plate: string, fleetId: string) {

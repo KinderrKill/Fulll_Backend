@@ -36,6 +36,16 @@ export class FleetCommandHandler {
     }
   }
 
+  getByLocation(location: GPS): FleetData | undefined {
+    return this.fleetManager.getFleets().find((fleet) => {
+      return fleet.getLocation() === location;
+    });
+  }
+
+  getFleets(): FleetData[] {
+    return this.fleetManager.getFleets();
+  }
+
   addVehicleToFleet(fleetId: string, plate: string) {
     try {
       const vehicleData = this.vehicleManager.getByPlate(plate);

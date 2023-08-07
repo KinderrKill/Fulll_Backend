@@ -1,23 +1,23 @@
-import { VehicleManager } from './domain/VehicleManager';
-import { FleetManager } from './domain/FleetManager';
-import { VehicleData } from './domain/VehicleData';
-import { randomUUID } from 'crypto';
+import { GPS } from './utils/SharedTypes';
+import { VehicleCommandHandler } from './app/commands/VehicleCommandHandler';
 import { CLI_CHOICE, getConvertedMessage, getErrorMessage } from './utils/Constants';
 import { select, input } from '@inquirer/prompts';
-import { fleetManager as fm, vehicleManager as vm } from './index';
-import { FleetData } from './domain/FleetData';
-import { MSG_CLI, MSG_FM } from './utils/Lang';
+import { MSG_CLI, MSG_FM, MSG_VM, MSG_TEST } from './utils/Lang';
+import { FleetCommandHandler } from './app/commands/FleetCommandHandler';
 
-let fleetManager: FleetManager;
-let vehicleManager: VehicleManager;
+let fleetCommandHandler: FleetCommandHandler;
+let vehicleCommandHandler: VehicleCommandHandler;
 
-export function startCLI() {
-  if (fm === undefined || vm === undefined) {
+export function startCLI(
+  inputFleetCommandHandler: FleetCommandHandler,
+  inputVehicleCommandHandler: VehicleCommandHandler
+) {
+  if (inputFleetCommandHandler === undefined || inputVehicleCommandHandler === undefined) {
     console.error(MSG_CLI.ERROR_INIT);
     return;
   } else {
-    fleetManager = fm;
-    vehicleManager = vm;
+    fleetCommandHandler = inputFleetCommandHandler;
+    vehicleCommandHandler = inputVehicleCommandHandler;
 
     askAction();
   }
@@ -70,41 +70,42 @@ async function createFleet() {
     }),
   };
 
-  const fleet = new FleetData(
-    randomUUID(),
+  const fleet = fleetCommandHandler.register(
     parseInt(answers.latitude),
     parseInt(answers.longitude),
-    parseInt(answers.altitude) ? parseInt(answers.altitude) : undefined
+    parseInt(answers.altitude)
   );
 
-  fleetManager.registerFleet(fleet);
+  if (fleet === undefined) {
+    throw new Error(getErrorMessage(MSG_TEST.ERROR_DURING_FLEET_CREATION));
+  }
 
-  console.log('');
-  console.log(MSG_CLI.FLEET_CREATED, fleet);
-  console.log(MSG_CLI.FLEET_ID, fleet.getId());
-  console.log(MSG_CLI.FLEET_GPS, fleet.getLocation());
-  console.log('');
+  displayBlankLine();
+  console.log(getConvertedMessage(MSG_CLI.FLEET_CREATED));
+  console.log(getConvertedMessage(MSG_CLI.FLEET_ID, fleet.getId()));
+  console.log(getConvertedMessage(MSG_CLI.FLEET_GPS, JSON.stringify(fleet.getLocation())));
+  displayBlankLine();
 
   await askAction();
 }
 
 async function registerVehicle() {
-  console.log('');
+  displayBlankLine();
   const answers = {
     fleetId: await input({ message: MSG_CLI.ASK_FLEET_ID }),
     plate: await input({ message: MSG_CLI.ASK_PLATE }),
   };
-  console.log('');
+  displayBlankLine();
 
   try {
-    const fleetData = fleetManager.getById(answers.fleetId);
+    const fleetData = fleetCommandHandler.getById(answers.fleetId);
     if (fleetData === undefined) throw new Error(getErrorMessage(MSG_FM.UNDEFINED_FLEET, answers.fleetId));
 
-    const vehicleData = new VehicleData(answers.plate, answers.fleetId);
-    vehicleManager.registerVehicle(vehicleData);
-    vehicleManager.updateVehicleLocation(vehicleData, fleetData.getLocation());
+    const vehicle = vehicleCommandHandler.register(answers.plate, answers.fleetId);
+    if (vehicle === undefined) throw new Error(getErrorMessage(MSG_TEST.ERROR_DURING_VEHICLE_CREATION));
+    vehicleCommandHandler.assignLocationToVehicle(answers.plate, fleetData.getId());
 
-    fleetManager.addVehicleToFleet(answers.fleetId, vehicleData);
+    fleetCommandHandler.addVehicleToFleet(fleetData.getId(), answers.plate);
   } catch (error) {
     console.error(error);
   }
@@ -113,41 +114,57 @@ async function registerVehicle() {
 }
 
 async function locateVehicle() {
-  console.log('');
+  displayBlankLine();
   const plate = await input({ message: MSG_CLI.ASK_PLATE });
-  console.log('');
+  displayBlankLine();
 
   try {
-    const vehicleData = vehicleManager.getByPlate(plate);
-    if (vehicleData !== undefined && vehicleData.getLocation() !== undefined) {
-      console.log(getConvertedMessage(MSG_CLI.LOCATE_SUCESS, [plate, JSON.stringify(vehicleData.getLocation())]));
+    const vehicleData = vehicleCommandHandler.getByPlate(plate);
+    if (vehicleData !== undefined) {
+      const vehicleLocation = vehicleData.getLocation();
+      if (vehicleLocation !== undefined) {
+        const fleetData = fleetCommandHandler.getByLocation(vehicleLocation);
+        if (fleetData === undefined) {
+          throw new Error(
+            getErrorMessage(MSG_CLI.LOCATE_ERROR_NO_FLEET_FOUND, [plate, JSON.stringify(vehicleLocation)])
+          );
+        }
+        console.log(
+          getConvertedMessage(MSG_CLI.LOCATE_SUCESS, [plate, JSON.stringify(vehicleLocation), fleetData.getId()])
+        );
+      }
     }
   } catch {
     console.error(getErrorMessage(MSG_CLI.LOCATE_ERROR, [plate]));
   }
 
-  console.log('');
+  displayBlankLine();
   await askAction();
 }
 
 async function consultData() {
-  console.log('');
+  displayBlankLine();
   console.log(MSG_CLI.CONSULT_FLEET);
 
-  fleetManager.getFleets().forEach((fleet) => {
-    console.log(MSG_CLI.FLEET_ID, fleet.getId());
-    console.log(MSG_CLI.FLEET_GPS, JSON.stringify(fleet.getLocation()));
+  fleetCommandHandler.getFleets().forEach((fleet) => {
+    console.log(getConvertedMessage(MSG_CLI.FLEET_ID, fleet.getId()));
+    console.log(getConvertedMessage(MSG_CLI.FLEET_GPS, JSON.stringify(fleet.getLocation())));
 
-    console.log(MSG_CLI.FLEET_VEHICLES, fleet.getParkedVehicles());
-    console.log('');
+    console.log(getConvertedMessage(MSG_CLI.FLEET_VEHICLES, JSON.stringify(fleet.getParkedVehicles())));
+    displayBlankLine();
   });
 
   console.log(MSG_CLI.CONSULT_VEHICLE);
 
-  vehicleManager.getVehicles().forEach((vehicle) => {
-    console.log('.', vehicle);
+  vehicleCommandHandler.getVehicles().forEach((vehicle) => {
+    console.log(JSON.stringify(vehicle));
   });
 
-  console.log('');
+  displayBlankLine();
+
   await askAction();
+}
+
+function displayBlankLine(): void {
+  return console.log('');
 }
