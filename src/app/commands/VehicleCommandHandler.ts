@@ -19,19 +19,12 @@ export class VehicleCommandHandler {
       const newVehicle = new VehicleData(plate, fleetId);
       this.vehicleManager.registerVehicle(newVehicle);
     } catch (error) {
-      console.error(error);
+      throw new Error(error?.toString());
     }
   }
 
   getByPlate(plate: string): VehicleData | undefined {
-    try {
-      const vehicleData = this.vehicleManager.getByPlate(plate);
-      if (vehicleData === undefined) throw new Error(getErrorMessage(MSG_VM.UNDEFINED_VEHICLE, plate));
-
-      return vehicleData;
-    } catch (error) {
-      console.error(error);
-    }
+    return this.vehicleManager.getByPlate(plate);
   }
 
   assignLocationToVehicle(plate: string, fleetId: string) {
@@ -44,7 +37,7 @@ export class VehicleCommandHandler {
 
       this.vehicleManager.updateVehicleLocation(vehiculeData, fleetData.getLocation());
     } catch (error) {
-      console.error(error);
+      throw new Error(error?.toString());
     }
   }
 
@@ -53,7 +46,7 @@ export class VehicleCommandHandler {
       const vehicleData = this.getByPlate(plate);
       return vehicleData?.getLocation();
     } catch (error) {
-      console.error(error);
+      throw new Error(error?.toString());
     }
   }
 }
